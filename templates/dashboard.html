@@ -1,0 +1,1117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Globex Financial — Security Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:         #080c10;
+      --surface:    #0d1117;
+      --surface2:   #131a22;
+      --border:     #1e2a35;
+      --border2:    #253444;
+      --text:       #ccd6f6;
+      --text-dim:   #5a7a9a;
+      --text-faint: #2e4258;
+      --accent:     #00d4ff;
+      --accent-dim: #0a8fa8;
+      --green:      #00e676;
+      --green-dim:  #1a4a2a;
+      --red:        #ff4757;
+      --red-dim:    #3a1020;
+      --orange:     #ff9800;
+      --orange-dim: #3a2a10;
+      --yellow:     #ffd740;
+      --purple:     #b39ddb;
+      --mono:       'IBM Plex Mono', monospace;
+      --sans:       'IBM Plex Sans', sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 14px;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Scanline overlay */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background: repeating-linear-gradient(
+        0deg, transparent, transparent 2px,
+        rgba(0,212,255,0.015) 2px, rgba(0,212,255,0.015) 4px
+      );
+      pointer-events: none; z-index: 9999;
+    }
+
+    /* ── HEADER ── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      height: 56px;
+      display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 100;
+    }
+
+    .header-logo {
+      display: flex; align-items: center; gap: 12px;
+    }
+    .logo-mark {
+      width: 32px; height: 32px;
+      background: linear-gradient(135deg, var(--accent), #0050ff);
+      border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--mono); font-weight: 600; font-size: 13px;
+      color: #fff;
+    }
+    .header-title {
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--accent);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+    .header-title span { color: var(--text-dim); }
+
+    .header-meta {
+      display: flex; align-items: center; gap: 20px;
+    }
+    .live-indicator {
+      display: flex; align-items: center; gap: 6px;
+      font-family: var(--mono); font-size: 11px;
+      color: var(--green);
+    }
+    .live-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--green);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: 0.4; transform: scale(0.8); }
+    }
+    #live-time {
+      font-family: var(--mono); font-size: 12px;
+      color: var(--text-dim); letter-spacing: 0.05em;
+    }
+
+    /* ── LAYOUT ── */
+    .layout {
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      min-height: calc(100vh - 56px);
+    }
+
+    /* ── SIDEBAR ── */
+    nav {
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      padding: 20px 0;
+      position: sticky; top: 56px;
+      height: calc(100vh - 56px);
+      overflow-y: auto;
+    }
+
+    .nav-section {
+      padding: 6px 16px 4px;
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--text-faint);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      margin-top: 16px;
+    }
+    .nav-section:first-child { margin-top: 0; }
+
+    nav a {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 20px;
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 500;
+      border-left: 2px solid transparent;
+      transition: all 0.15s ease;
+      cursor: pointer;
+    }
+    nav a:hover { background: var(--surface2); color: var(--text); }
+    nav a.active {
+      color: var(--accent);
+      border-left-color: var(--accent);
+      background: rgba(0,212,255,0.06);
+    }
+    nav a .nav-icon { font-size: 15px; width: 18px; text-align: center; }
+    .nav-badge {
+      margin-left: auto;
+      background: var(--red);
+      color: #fff; font-family: var(--mono); font-size: 10px;
+      padding: 1px 6px; border-radius: 10px;
+    }
+
+    /* ── MAIN CONTENT ── */
+    main { padding: 24px; overflow-y: auto; }
+
+    /* ── SECTION ── */
+    .section { display: none; }
+    .section.active { display: block; animation: fadeIn 0.2s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* ── PAGE HEADER ── */
+    .page-header {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      margin-bottom: 24px;
+    }
+    .page-header h1 {
+      font-size: 22px; font-weight: 600; color: var(--text);
+      letter-spacing: -0.3px;
+    }
+    .page-header p { color: var(--text-dim); font-size: 13px; margin-top: 3px; }
+
+    /* ── STAT CARDS ── */
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 14px; margin-bottom: 24px;
+    }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px 18px;
+      position: relative; overflow: hidden;
+    }
+    .stat-card::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0;
+      height: 2px;
+      background: var(--accent);
+    }
+    .stat-card.red::before   { background: var(--red); }
+    .stat-card.green::before { background: var(--green); }
+    .stat-card.orange::before{ background: var(--orange); }
+    .stat-card.purple::before{ background: var(--purple); }
+
+    .stat-label {
+      font-family: var(--mono); font-size: 10px;
+      color: var(--text-dim); letter-spacing: 0.1em;
+      text-transform: uppercase; margin-bottom: 8px;
+    }
+    .stat-value {
+      font-family: var(--mono); font-size: 28px; font-weight: 600;
+      color: var(--text); line-height: 1;
+    }
+    .stat-value.red    { color: var(--red); }
+    .stat-value.green  { color: var(--green); }
+    .stat-value.orange { color: var(--orange); }
+    .stat-value.accent { color: var(--accent); }
+
+    .stat-sub {
+      font-size: 11px; color: var(--text-dim);
+      margin-top: 4px;
+    }
+
+    /* ── CARDS ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 16px;
+    }
+    .card-header {
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .card-title {
+      font-family: var(--mono); font-size: 12px;
+      color: var(--text-dim); letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .card-body { padding: 20px; }
+
+    /* ── TABLE ── */
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; }
+    th {
+      font-family: var(--mono); font-size: 10px;
+      color: var(--text-faint); letter-spacing: 0.12em;
+      text-transform: uppercase; font-weight: 500;
+      padding: 8px 14px;
+      border-bottom: 1px solid var(--border);
+      text-align: left; white-space: nowrap;
+    }
+    td {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px; color: var(--text);
+      vertical-align: middle;
+    }
+    tr:last-child td { border-bottom: none; }
+    tbody tr:hover { background: var(--surface2); }
+
+    .mono { font-family: var(--mono); font-size: 12px; }
+
+    /* ── BADGES ── */
+    .badge {
+      display: inline-flex; align-items: center;
+      padding: 2px 8px; border-radius: 4px;
+      font-family: var(--mono); font-size: 10px;
+      letter-spacing: 0.05em; font-weight: 600;
+    }
+    .badge.CRITICAL, .badge.critical { background: var(--red-dim);    color: var(--red); }
+    .badge.HIGH,     .badge.high     { background: var(--orange-dim); color: var(--orange); }
+    .badge.MEDIUM,   .badge.medium   { background: rgba(255,215,64,.12); color: var(--yellow); }
+    .badge.LOW,      .badge.low      { background: rgba(0,230,118,.1); color: var(--green); }
+    .badge.acl_deny   { background: var(--red-dim); color: var(--red); }
+    .badge.auth_fail  { background: var(--orange-dim); color: var(--orange); }
+    .badge.auth_warn  { background: rgba(255,215,64,.12); color: var(--yellow); }
+    .badge.sudo_fail  { background: rgba(179,157,219,.1); color: var(--purple); }
+    .badge.perm_change{ background: var(--red-dim); color: var(--red); }
+
+    .badge.restricted { background: rgba(0,212,255,.1); color: var(--accent); }
+    .badge.relaxed    { background: var(--green-dim); color: var(--green); }
+    .badge.active     { background: var(--green-dim); color: var(--green); }
+    .badge.disabled   { background: rgba(90,122,154,.1); color: var(--text-dim); }
+
+    .role-senior { color: var(--accent); }
+    .role-admin  { color: var(--yellow); }
+    .role-analyst{ color: var(--text); }
+    .role-viewer { color: var(--text-dim); }
+    .proj-a      { color: #64b5f6; }
+    .proj-b      { color: #ce93d8; }
+    .proj-both   { color: var(--yellow); }
+
+    /* ── BUTTONS ── */
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 7px 14px; border-radius: 5px;
+      font-family: var(--mono); font-size: 11px; font-weight: 500;
+      letter-spacing: 0.05em; cursor: pointer;
+      border: 1px solid transparent; transition: all 0.15s ease;
+      text-decoration: none;
+    }
+    .btn-primary { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+    .btn-primary:hover { background: #33dcff; }
+    .btn-ghost   { background: transparent; color: var(--text-dim); border-color: var(--border2); }
+    .btn-ghost:hover { background: var(--surface2); color: var(--text); }
+    .btn-danger  { background: transparent; color: var(--red); border-color: var(--red-dim); }
+    .btn-danger:hover { background: var(--red-dim); }
+    .btn-sm { padding: 4px 10px; font-size: 10px; }
+    .btn-success { background: transparent; color: var(--green); border-color: var(--green-dim); }
+    .btn-success:hover { background: var(--green-dim); }
+
+    /* ── TOGGLE ── */
+    .toggle-wrap {
+      display: flex; align-items: center; gap: 10px;
+    }
+    .toggle {
+      position: relative; width: 44px; height: 22px;
+      cursor: pointer;
+    }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider {
+      position: absolute; inset: 0;
+      background: var(--border2); border-radius: 22px;
+      transition: 0.2s ease;
+    }
+    .toggle-slider::before {
+      content: '';
+      position: absolute; width: 16px; height: 16px;
+      left: 3px; top: 3px;
+      background: var(--text-dim); border-radius: 50%;
+      transition: 0.2s ease;
+    }
+    .toggle input:checked + .toggle-slider { background: var(--accent); }
+    .toggle input:checked + .toggle-slider::before {
+      transform: translateX(22px); background: var(--bg);
+    }
+    .toggle-label { font-size: 12px; color: var(--text-dim); }
+
+    /* ── MODAL ── */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.8); backdrop-filter: blur(4px);
+      z-index: 1000; align-items: center; justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: 10px;
+      width: 480px; max-width: 95vw;
+      animation: modalIn 0.2s ease;
+    }
+    @keyframes modalIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+    .modal-header {
+      padding: 18px 22px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .modal-title { font-size: 15px; font-weight: 600; }
+    .modal-close { background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 18px; }
+    .modal-body { padding: 22px; }
+    .modal-footer { padding: 14px 22px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; }
+
+    /* ── FORM ── */
+    .form-group { margin-bottom: 16px; }
+    .form-label {
+      display: block; margin-bottom: 5px;
+      font-family: var(--mono); font-size: 10px;
+      color: var(--text-dim); letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+    .form-control {
+      width: 100%; padding: 9px 12px;
+      background: var(--bg); border: 1px solid var(--border2);
+      border-radius: 5px; color: var(--text);
+      font-family: var(--mono); font-size: 12px;
+      outline: none; transition: border 0.15s;
+    }
+    .form-control:focus { border-color: var(--accent); }
+    .form-control option { background: var(--surface); }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    /* ── TOAST ── */
+    #toast {
+      position: fixed; bottom: 24px; right: 24px;
+      background: var(--surface2); border: 1px solid var(--border2);
+      border-left: 3px solid var(--green);
+      color: var(--text); padding: 12px 18px;
+      border-radius: 6px; font-size: 13px; z-index: 9999;
+      display: none; font-family: var(--mono);
+      animation: slideIn 0.2s ease;
+    }
+    #toast.error { border-left-color: var(--red); }
+    @keyframes slideIn { from { transform: translateY(10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+    /* ── ACL GRID ── */
+    .acl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .acl-card {
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: 8px; padding: 18px;
+    }
+    .acl-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; }
+    .acl-path { font-family: var(--mono); font-size: 12px; color: var(--accent); }
+    .acl-meta { margin-bottom: 14px; }
+    .acl-meta-row {
+      display: flex; justify-content: space-between;
+      margin-bottom: 6px; font-size: 12px;
+    }
+    .acl-meta-key { color: var(--text-dim); }
+    .acl-meta-val { font-family: var(--mono); color: var(--text); }
+
+    /* ── HISTORY POLICY ── */
+    .policy-card {
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: 8px; padding: 18px;
+      display: flex; align-items: center; gap: 20px;
+    }
+    .policy-group { font-size: 13px; font-weight: 500; flex: 1; }
+    .policy-limit {
+      font-family: var(--mono); font-size: 28px;
+      color: var(--accent); font-weight: 600;
+    }
+    .policy-limit span { font-size: 11px; color: var(--text-dim); }
+
+    /* ── AUDIT LOG ── */
+    .audit-entry {
+      display: flex; gap: 14px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 12px;
+    }
+    .audit-entry:last-child { border-bottom: none; }
+    .audit-ts { font-family: var(--mono); color: var(--text-dim); white-space: nowrap; }
+    .audit-event { font-family: var(--mono); color: var(--accent); white-space: nowrap; min-width: 180px; }
+    .audit-detail { color: var(--text); }
+
+    /* ── SEVERITY CHART ── */
+    .sev-bars { display: flex; flex-direction: column; gap: 8px; }
+    .sev-row { display: flex; align-items: center; gap: 10px; }
+    .sev-label { font-family: var(--mono); font-size: 10px; width: 60px; color: var(--text-dim); }
+    .sev-bar-wrap { flex: 1; background: var(--border); border-radius: 2px; height: 8px; overflow: hidden; }
+    .sev-bar { height: 100%; border-radius: 2px; transition: width 0.4s ease; }
+    .sev-bar.CRITICAL { background: var(--red); }
+    .sev-bar.HIGH     { background: var(--orange); }
+    .sev-bar.MEDIUM   { background: var(--yellow); }
+    .sev-bar.LOW      { background: var(--green); }
+    .sev-count { font-family: var(--mono); font-size: 11px; color: var(--text-dim); width: 24px; text-align: right; }
+
+    /* ── TWO COLUMN LAYOUT ── */
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 900px) { .two-col { grid-template-columns: 1fr; } .acl-grid { grid-template-columns: 1fr; } }
+
+    /* ── SEARCH BAR ── */
+    .search-bar {
+      background: var(--bg); border: 1px solid var(--border2);
+      border-radius: 5px; padding: 8px 12px;
+      font-family: var(--mono); font-size: 12px;
+      color: var(--text); outline: none; width: 220px;
+    }
+    .search-bar::placeholder { color: var(--text-faint); }
+    .search-bar:focus { border-color: var(--accent); }
+
+    /* ── INLINE EDIT ── */
+    .inline-input {
+      background: var(--bg); border: 1px solid var(--border2);
+      border-radius: 4px; padding: 4px 8px;
+      font-family: var(--mono); font-size: 12px;
+      color: var(--accent); outline: none; width: 70px;
+    }
+    .inline-input:focus { border-color: var(--accent); }
+
+    /* scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--text-faint); }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="header-logo">
+    <div class="logo-mark">GF</div>
+    <div>
+      <div class="header-title">GLOBEX FINANCIAL <span>/ SECURITY DASHBOARD</span></div>
+    </div>
+  </div>
+  <div class="header-meta">
+    <div class="live-indicator">
+      <div class="live-dot"></div> LIVE
+    </div>
+    <div id="live-time">--:--:--</div>
+  </div>
+</header>
+
+<div class="layout">
+  <!-- SIDEBAR -->
+  <nav id="sidebar">
+    <div class="nav-section">Overview</div>
+    <a class="active" data-section="overview" onclick="navTo('overview')">
+      <span class="nav-icon">◈</span> Dashboard
+    </a>
+
+    <div class="nav-section">Task 1 — Access</div>
+    <a data-section="users" onclick="navTo('users')">
+      <span class="nav-icon">◉</span> User Accounts
+    </a>
+    <a data-section="acl" onclick="navTo('acl')">
+      <span class="nav-icon">◧</span> ACL Permissions
+    </a>
+
+    <div class="nav-section">Task 2 — History</div>
+    <a data-section="history" onclick="navTo('history')">
+      <span class="nav-icon">◫</span> History Policy
+    </a>
+    <a data-section="cmdlog" onclick="navTo('cmdlog')">
+      <span class="nav-icon">▤</span> Command Log
+    </a>
+
+    <div class="nav-section">Task 3–4 — Security</div>
+    <a data-section="violations" onclick="navTo('violations')">
+      <span class="nav-icon">⚑</span> Violations
+      <span class="nav-badge" id="badge-violations">–</span>
+    </a>
+
+    <div class="nav-section">Task 5 — Audit</div>
+    <a data-section="audit" onclick="navTo('audit')">
+      <span class="nav-icon">◰</span> Audit Log
+    </a>
+  </nav>
+
+  <!-- MAIN -->
+  <main>
+
+    <!-- ── OVERVIEW ── -->
+    <div class="section active" id="section-overview">
+      <div class="page-header">
+        <div>
+          <h1>Security Overview</h1>
+          <p>Real-time status across all Globex Financial projects</p>
+        </div>
+      </div>
+
+      <div class="stat-grid" id="stat-grid">
+        <div class="stat-card"><div class="stat-label">Users</div><div class="stat-value accent" id="stat-users">–</div><div class="stat-sub">Active accounts</div></div>
+        <div class="stat-card red"><div class="stat-label">Unreviewed</div><div class="stat-value red" id="stat-unreviewed">–</div><div class="stat-sub">Security violations</div></div>
+        <div class="stat-card"><div class="stat-label">Total Violations</div><div class="stat-value" id="stat-total-viol">–</div><div class="stat-sub">Last 72 hours</div></div>
+        <div class="stat-card green"><div class="stat-label">Restricted Dirs</div><div class="stat-value green" id="stat-restricted">–</div><div class="stat-sub">Owner-only modify</div></div>
+        <div class="stat-card orange"><div class="stat-label">Relaxed Dirs</div><div class="stat-value orange" id="stat-relaxed">–</div><div class="stat-sub">Group write access</div></div>
+        <div class="stat-card purple"><div class="stat-label">Projects</div><div class="stat-value" id="stat-projects" style="color:var(--purple)">–</div><div class="stat-sub">Active</div></div>
+      </div>
+
+      <div class="two-col">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Violations by Severity</div>
+          </div>
+          <div class="card-body">
+            <div class="sev-bars" id="sev-bars">Loading...</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Recent Activity</div>
+          </div>
+          <div class="card-body" id="recent-audit" style="max-height:220px;overflow-y:auto">Loading...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── USERS ── -->
+    <div class="section" id="section-users">
+      <div class="page-header">
+        <div>
+          <h1>User Accounts</h1>
+          <p>Manage project team members and role assignments</p>
+        </div>
+        <button class="btn btn-primary" onclick="openModal('modal-create-user')">＋ Add User</button>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">All Users</div>
+          <input class="search-bar" placeholder="Search users..." oninput="filterTable('user-table', this.value)">
+        </div>
+        <div class="card-body" style="padding:0">
+          <div class="table-wrap">
+            <table id="user-table">
+              <thead>
+                <tr>
+                  <th>Username</th>
+                  <th>Full Name</th>
+                  <th>Role</th>
+                  <th>Project</th>
+                  <th>Status</th>
+                  <th>Last Login</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="user-tbody">
+                <tr><td colspan="7" style="text-align:center;color:var(--text-dim);padding:30px">Loading...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── ACL ── -->
+    <div class="section" id="section-acl">
+      <div class="page-header">
+        <div>
+          <h1>ACL Permissions</h1>
+          <p>File system access control lists — toggle restriction state per directory</p>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header">
+          <div class="card-title">Access Control Model</div>
+        </div>
+        <div class="card-body">
+          <table style="width:100%">
+            <thead><tr><th>Principal</th><th>Restricted Mode</th><th>Relaxed Mode</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">Owner</td><td><span class="badge active">rwx</span></td><td><span class="badge active">rwx</span></td><td>Always full control</td></tr>
+              <tr><td class="mono">Group Members</td><td><span class="badge MEDIUM">r-x</span></td><td><span class="badge active">rwx</span></td><td>Read-only by default</td></tr>
+              <tr><td class="mono">Others</td><td><span class="badge CRITICAL">---</span></td><td><span class="badge CRITICAL">---</span></td><td>Always denied</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="acl-grid" id="acl-grid">
+        <div style="color:var(--text-dim);padding:20px">Loading...</div>
+      </div>
+    </div>
+
+    <!-- ── HISTORY POLICY ── -->
+    <div class="section" id="section-history">
+      <div class="page-header">
+        <div>
+          <h1>History Policy</h1>
+          <p>Configure HISTSIZE limits per role group — toggle or override defaults</p>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header">
+          <div class="card-title">Default Configuration</div>
+        </div>
+        <div class="card-body">
+          <p style="color:var(--text-dim);font-size:13px;line-height:1.6">
+            Configured via <span class="mono" style="color:var(--accent)">/etc/profile.d/globex_history.sh</span>.
+            Senior Analysts retain only the last <strong>10</strong> commands (minimal audit footprint).
+            All other users retain <strong>50</strong> commands for audit trail requirements.
+            All commands are timestamped and appended immediately.
+          </p>
+        </div>
+      </div>
+
+      <div id="history-policies" style="display:flex;flex-direction:column;gap:12px">
+        <div style="color:var(--text-dim);padding:20px">Loading...</div>
+      </div>
+    </div>
+
+    <!-- ── COMMAND LOG ── -->
+    <div class="section" id="section-cmdlog">
+      <div class="page-header">
+        <div>
+          <h1>Command History</h1>
+          <p>Audit trail of user commands across all project accounts</p>
+        </div>
+        <input class="search-bar" placeholder="Filter by user or command..." oninput="filterTable('cmd-table', this.value)" id="cmd-search">
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Recent Commands</div>
+        </div>
+        <div class="card-body" style="padding:0">
+          <div class="table-wrap" style="max-height:500px;overflow-y:auto">
+            <table id="cmd-table">
+              <thead><tr><th>Timestamp</th><th>User</th><th>Command</th></tr></thead>
+              <tbody id="cmd-tbody">
+                <tr><td colspan="3" style="text-align:center;color:var(--text-dim);padding:30px">Loading...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── VIOLATIONS ── -->
+    <div class="section" id="section-violations">
+      <div class="page-header">
+        <div>
+          <h1>Security Violations</h1>
+          <p>Unauthorized access attempts logged by Rsyslog — requires IT review</p>
+        </div>
+        <div style="display:flex;gap:8px">
+          <select class="search-bar" id="viol-filter" onchange="loadViolations()" style="width:140px">
+            <option value="">All Severity</option>
+            <option value="CRITICAL">Critical</option>
+            <option value="HIGH">High</option>
+            <option value="MEDIUM">Medium</option>
+            <option value="LOW">Low</option>
+          </select>
+          <select class="search-bar" id="viol-type-filter" onchange="loadViolations()" style="width:140px">
+            <option value="">All Types</option>
+            <option value="acl_deny">ACL Deny</option>
+            <option value="auth_fail">Auth Fail</option>
+            <option value="sudo_fail">Sudo Fail</option>
+            <option value="perm_change">Perm Change</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Violation Events</div>
+        </div>
+        <div class="card-body" style="padding:0">
+          <div class="table-wrap">
+            <table id="viol-table">
+              <thead><tr><th>#</th><th>Timestamp</th><th>User</th><th>Type</th><th>Severity</th><th>Message</th><th>Status</th><th>Action</th></tr></thead>
+              <tbody id="viol-tbody">
+                <tr><td colspan="8" style="text-align:center;color:var(--text-dim);padding:30px">Loading...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── AUDIT LOG ── -->
+    <div class="section" id="section-audit">
+      <div class="page-header">
+        <div>
+          <h1>Audit Log</h1>
+          <p>Dashboard actions and system configuration changes</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><div class="card-title">System Events</div></div>
+        <div class="card-body">
+          <div id="audit-entries" style="max-height:600px;overflow-y:auto">Loading...</div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ── MODAL: CREATE USER ── -->
+<div class="modal-overlay" id="modal-create-user">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Add New User</div>
+      <button class="modal-close" onclick="closeModal('modal-create-user')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Username</label>
+          <input class="form-control" id="new-username" placeholder="e.g. john_doe">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Full Name</label>
+          <input class="form-control" id="new-fullname" placeholder="e.g. John Doe">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Role</label>
+          <select class="form-control" id="new-role">
+            <option value="Senior Analyst">Senior Analyst</option>
+            <option value="Analyst">Analyst</option>
+            <option value="Viewer">Viewer</option>
+            <option value="Admin">Admin</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Project</label>
+          <select class="form-control" id="new-project">
+            <option value="A">Project A</option>
+            <option value="B">Project B</option>
+            <option value="A+B">Both (A+B)</option>
+            <option value="All">All Projects</option>
+          </select>
+        </div>
+      </div>
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:12px;margin-top:4px">
+        <p style="font-family:var(--mono);font-size:11px;color:var(--text-dim)">
+          ⓘ Default password: <span style="color:var(--accent)">GlobexTemp@2024!</span><br>
+          User will be required to change password on first login.
+        </p>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-create-user')">Cancel</button>
+      <button class="btn btn-primary" onclick="createUser()">Create User</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script>
+  let allViolations = [];
+  let currentSection = 'overview';
+
+  // ── Nav ──
+  function navTo(section) {
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('nav a').forEach(a => a.classList.remove('active'));
+    document.getElementById('section-' + section).classList.add('active');
+    document.querySelector(`[data-section="${section}"]`).classList.add('active');
+    currentSection = section;
+    if (section === 'overview')    loadOverview();
+    if (section === 'users')       loadUsers();
+    if (section === 'acl')         loadACL();
+    if (section === 'history')     loadHistoryPolicy();
+    if (section === 'cmdlog')      loadCommandLog();
+    if (section === 'violations')  loadViolations();
+    if (section === 'audit')       loadAuditLog();
+  }
+
+  // ── Clock ──
+  function updateClock() {
+    const now = new Date();
+    document.getElementById('live-time').textContent =
+      now.toLocaleTimeString('en-US', { hour12: false }) + ' UTC';
+  }
+  setInterval(updateClock, 1000); updateClock();
+
+  // ── Toast ──
+  function toast(msg, type='success') {
+    const el = document.getElementById('toast');
+    el.textContent = msg; el.className = type;
+    el.style.display = 'block';
+    setTimeout(() => el.style.display = 'none', 3000);
+  }
+
+  // ── Modal ──
+  function openModal(id)  { document.getElementById(id).classList.add('open'); }
+  function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+  // ── Table filter ──
+  function filterTable(tableId, query) {
+    const q = query.toLowerCase();
+    document.querySelectorAll(`#${tableId} tbody tr`).forEach(row => {
+      row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+  }
+
+  // ── Role badge ──
+  function roleClass(role) {
+    if (role.toLowerCase().includes('senior')) return 'role-senior';
+    if (role.toLowerCase().includes('admin'))  return 'role-admin';
+    if (role.toLowerCase().includes('analyst'))return 'role-analyst';
+    return 'role-viewer';
+  }
+  function projClass(p) {
+    if (p === 'A') return 'proj-a';
+    if (p === 'B') return 'proj-b';
+    return 'proj-both';
+  }
+
+  // ─────────────────────────────────────────────
+  //  OVERVIEW
+  // ─────────────────────────────────────────────
+  async function loadOverview() {
+    const [stats, audit] = await Promise.all([
+      fetch('/api/stats').then(r=>r.json()),
+      fetch('/api/audit-log').then(r=>r.json()),
+    ]);
+
+    document.getElementById('stat-users').textContent      = stats.total_users;
+    document.getElementById('stat-unreviewed').textContent = stats.unreviewed;
+    document.getElementById('stat-total-viol').textContent = stats.total_violations;
+    document.getElementById('stat-restricted').textContent = stats.restricted_dirs;
+    document.getElementById('stat-relaxed').textContent    = stats.relaxed_dirs;
+    document.getElementById('stat-projects').textContent   = stats.active_projects;
+    document.getElementById('badge-violations').textContent = stats.unreviewed;
+
+    const sev = stats.by_severity;
+    const total = Object.values(sev).reduce((a,b) => a+b, 0) || 1;
+    const bars = ['CRITICAL','HIGH','MEDIUM','LOW'].map(s => `
+      <div class="sev-row">
+        <div class="sev-label">${s}</div>
+        <div class="sev-bar-wrap">
+          <div class="sev-bar ${s}" style="width:${Math.round((sev[s]||0)/total*100)}%"></div>
+        </div>
+        <div class="sev-count">${sev[s]||0}</div>
+      </div>`).join('');
+    document.getElementById('sev-bars').innerHTML = bars;
+
+    const auditHtml = audit.slice(0, 8).map(e => `
+      <div class="audit-entry">
+        <div class="audit-ts">${e.timestamp.slice(11,19)}</div>
+        <div class="audit-event">${e.event}</div>
+        <div class="audit-detail">${e.detail}</div>
+      </div>`).join('');
+    document.getElementById('recent-audit').innerHTML = auditHtml;
+  }
+
+  // ─────────────────────────────────────────────
+  //  USERS
+  // ─────────────────────────────────────────────
+  async function loadUsers() {
+    const users = await fetch('/api/users').then(r=>r.json());
+    const tbody = document.getElementById('user-tbody');
+    tbody.innerHTML = users.map(u => `
+      <tr>
+        <td class="mono" style="color:var(--accent)">${u.username}</td>
+        <td>${u.fullname}</td>
+        <td class="${roleClass(u.role)}">${u.role}</td>
+        <td class="${projClass(u.project)} mono">${u.project}</td>
+        <td><span class="badge ${u.status}">${u.status.toUpperCase()}</span></td>
+        <td class="mono" style="color:var(--text-dim);font-size:11px">${u.last_login}</td>
+        <td>
+          ${u.username !== 'globex_admin' ? `
+          <button class="btn btn-danger btn-sm" onclick="deleteUser('${u.username}')">Remove</button>` : ''}
+        </td>
+      </tr>`).join('');
+  }
+
+  async function createUser() {
+    const payload = {
+      username: document.getElementById('new-username').value.trim(),
+      fullname: document.getElementById('new-fullname').value.trim(),
+      role:     document.getElementById('new-role').value,
+      project:  document.getElementById('new-project').value,
+    };
+    if (!payload.username || !payload.fullname) { toast('Please fill all fields', 'error'); return; }
+
+    const res = await fetch('/api/users/create', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    }).then(r=>r.json());
+
+    if (res.success) {
+      closeModal('modal-create-user');
+      toast(`✔ User '${payload.username}' created`);
+      loadUsers();
+      ['new-username','new-fullname'].forEach(id => document.getElementById(id).value='');
+    } else {
+      toast(res.error || 'Error creating user', 'error');
+    }
+  }
+
+  async function deleteUser(username) {
+    if (!confirm(`Remove user '${username}'? This cannot be undone.`)) return;
+    const res = await fetch(`/api/users/delete/${username}`, {method:'DELETE'}).then(r=>r.json());
+    if (res.success) { toast(`User '${username}' removed`); loadUsers(); }
+    else toast(res.error || 'Error', 'error');
+  }
+
+  // ─────────────────────────────────────────────
+  //  ACL
+  // ─────────────────────────────────────────────
+  async function loadACL() {
+    const acls = await fetch('/api/acl').then(r=>r.json());
+    const grid = document.getElementById('acl-grid');
+    grid.innerHTML = acls.map(a => `
+      <div class="acl-card">
+        <div class="acl-card-header">
+          <div class="acl-path">${a.directory}</div>
+          <span class="badge ${a.state}">${a.state.toUpperCase()}</span>
+        </div>
+        <div class="acl-meta">
+          <div class="acl-meta-row"><span class="acl-meta-key">Owner</span><span class="acl-meta-val">${a.owner}</span></div>
+          <div class="acl-meta-row"><span class="acl-meta-key">Group</span><span class="acl-meta-val">${a.group}</span></div>
+          <div class="acl-meta-row"><span class="acl-meta-key">Last updated</span><span class="acl-meta-val" style="font-size:11px">${a.updated}</span></div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          ${a.state === 'restricted'
+            ? `<button class="btn btn-ghost btn-sm" onclick="toggleACL('${a.directory}','relaxed')">⬡ Relax (allow group write)</button>`
+            : `<button class="btn btn-primary btn-sm" onclick="toggleACL('${a.directory}','restricted')">⬢ Restrict (owner-only)</button>`
+          }
+        </div>
+      </div>`).join('');
+  }
+
+  async function toggleACL(directory, newState) {
+    const res = await fetch('/api/acl/toggle', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ directory, state: newState })
+    }).then(r=>r.json());
+    if (res.success) {
+      toast(`ACL for ${directory.split('/').pop()} → ${newState}`);
+      loadACL();
+    } else toast(res.error || 'Error', 'error');
+  }
+
+  // ─────────────────────────────────────────────
+  //  HISTORY POLICY
+  // ─────────────────────────────────────────────
+  async function loadHistoryPolicy() {
+    const policies = await fetch('/api/history-policy').then(r=>r.json());
+    document.getElementById('history-policies').innerHTML = policies.map(p => `
+      <div class="policy-card" id="policy-${btoa(p.group)}">
+        <div>
+          <div class="policy-group">${p.group}</div>
+          <div style="font-size:11px;color:var(--text-dim);margin-top:3px;font-family:var(--mono)">Applied: ${p.applied}</div>
+        </div>
+        <div style="text-align:center">
+          <div class="policy-limit">
+            <input class="inline-input" value="${p.limit}" id="hlimit-${btoa(p.group)}" type="number" min="1" max="1000">
+          </div>
+          <div style="font-size:10px;color:var(--text-dim);margin-top:2px">HISTSIZE</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end">
+          <span class="badge ${p.status}">${p.status.toUpperCase()}</span>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-ghost btn-sm" onclick="updateHistoryLimit('${p.group}')">Save Limit</button>
+            <button class="btn ${p.status==='active'?'btn-danger':'btn-success'} btn-sm"
+              onclick="toggleHistoryPolicy('${p.group}')">
+              ${p.status==='active' ? '⊘ Disable' : '⊕ Enable'}
+            </button>
+          </div>
+        </div>
+      </div>`).join('');
+  }
+
+  async function updateHistoryLimit(group) {
+    const limit = document.getElementById(`hlimit-${btoa(group)}`).value;
+    const res = await fetch('/api/history-policy/update', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ group, limit: parseInt(limit) })
+    }).then(r=>r.json());
+    if (res.success) { toast(`HISTSIZE for '${group}' → ${limit}`); loadHistoryPolicy(); }
+    else toast(res.error || 'Error', 'error');
+  }
+
+  async function toggleHistoryPolicy(group) {
+    const res = await fetch('/api/history-policy/toggle', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ group })
+    }).then(r=>r.json());
+    if (res.success) { toast(`History policy for '${group}' → ${res.policy.status}`); loadHistoryPolicy(); }
+    else toast(res.error, 'error');
+  }
+
+  // ─────────────────────────────────────────────
+  //  COMMAND LOG
+  // ─────────────────────────────────────────────
+  async function loadCommandLog() {
+    const cmds = await fetch('/api/command-history').then(r=>r.json());
+    document.getElementById('cmd-tbody').innerHTML = cmds.map(c => `
+      <tr>
+        <td class="mono" style="color:var(--text-dim);font-size:11px">${c.timestamp}</td>
+        <td class="mono" style="color:var(--accent)">${c.user}</td>
+        <td class="mono" style="color:var(--text)">${c.command}</td>
+      </tr>`).join('');
+  }
+
+  // ─────────────────────────────────────────────
+  //  VIOLATIONS
+  // ─────────────────────────────────────────────
+  async function loadViolations() {
+    if (!allViolations.length) {
+      allViolations = await fetch('/api/violations').then(r=>r.json());
+    }
+    const sevFilter  = document.getElementById('viol-filter').value;
+    const typeFilter = document.getElementById('viol-type-filter').value;
+
+    const filtered = allViolations.filter(v =>
+      (!sevFilter  || v.severity === sevFilter) &&
+      (!typeFilter || v.type     === typeFilter)
+    );
+
+    document.getElementById('viol-tbody').innerHTML = filtered.map(v => `
+      <tr id="vrow-${v.id}">
+        <td class="mono" style="color:var(--text-dim)">${String(v.id).padStart(3,'0')}</td>
+        <td class="mono" style="font-size:11px;color:var(--text-dim)">${v.timestamp}</td>
+        <td class="mono" style="color:var(--accent)">${v.user}</td>
+        <td><span class="badge ${v.type}">${v.type}</span></td>
+        <td><span class="badge ${v.severity}">${v.severity}</span></td>
+        <td style="max-width:280px;font-size:12px">${v.message}</td>
+        <td>${v.reviewed ? '<span class="badge active">REVIEWED</span>' : '<span class="badge MEDIUM">PENDING</span>'}</td>
+        <td>${!v.reviewed ? `<button class="btn btn-ghost btn-sm" onclick="markReviewed(${v.id})">Mark Done</button>` : ''}</td>
+      </tr>`).join('');
+  }
+
+  async function markReviewed(id) {
+    await fetch(`/api/violations/mark-reviewed/${id}`, { method: 'POST' });
+    const v = allViolations.find(x => x.id === id);
+    if (v) v.reviewed = true;
+    toast(`Violation #${id} marked as reviewed`);
+    loadViolations();
+  }
+
+  // ─────────────────────────────────────────────
+  //  AUDIT LOG
+  // ─────────────────────────────────────────────
+  async function loadAuditLog() {
+    const events = await fetch('/api/audit-log').then(r=>r.json());
+    document.getElementById('audit-entries').innerHTML = events.map(e => `
+      <div class="audit-entry">
+        <div class="audit-ts">${e.timestamp}</div>
+        <div class="audit-event">${e.event}</div>
+        <div class="audit-detail">${e.detail}</div>
+      </div>`).join('');
+  }
+
+  // ── Init ──
+  loadOverview();
+</script>
+</body>
+</html>
