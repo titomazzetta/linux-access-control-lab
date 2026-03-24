@@ -151,6 +151,26 @@ Default password: `GlobexTemp@2024!` — forced change on first login via `chage
 
 ---
 
+
+## Terminal Logging Check Scripts
+
+Use these helper scripts to validate Task 3 logging from your terminal:
+
+```bash
+# 1) Validate rsyslog + Globex log files
+bash scripts/check_logging_health.sh
+
+# 2) Generate synthetic authpriv test events
+bash scripts/generate_logging_test_events.sh 5   # emits test events without restarting rsyslog
+
+# 3) Watch structured security logs live
+bash scripts/watch_security_events.sh
+# Optional raw mode (skip jq formatting)
+bash scripts/watch_security_events.sh --raw
+```
+
+> Most commands require root or `sudo` access because they read `/var/log/globex/*` and check system services.
+
 ## Utility Commands
 
 ```bash
