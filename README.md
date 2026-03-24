@@ -165,8 +165,6 @@ bash scripts/generate_logging_test_events.sh 5   # emits test events without res
 
 # 3) Watch structured security logs live
 bash scripts/watch_security_events.sh
-# Optional raw mode (skip jq formatting)
-bash scripts/watch_security_events.sh --raw
 ```
 
 > Most commands require root or `sudo` access because they read `/var/log/globex/*` and check system services.

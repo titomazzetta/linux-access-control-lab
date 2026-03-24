@@ -4,17 +4,8 @@ set -euo pipefail
 COUNT="${1:-3}"
 LOG_FILE="/var/log/globex/security_events.jsonl"
 
-usage() {
-  echo "Usage: $0 [count>=1]"
-}
-
-if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
-  usage
-  exit 0
-fi
-
 if ! [[ "$COUNT" =~ ^[0-9]+$ ]] || [[ "$COUNT" -lt 1 ]]; then
-  usage
+  echo "Usage: $0 [count>=1]"
   exit 1
 fi
 

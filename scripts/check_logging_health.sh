@@ -7,15 +7,6 @@ AUTH_LOG="$LOG_DIR/auth.log"
 RSYSLOG_CONF="/etc/rsyslog.d/10-globex-security.conf"
 RSYSLOG_CHECK_OUT="/tmp/globex_rsyslog_check.out"
 
-usage() {
-  echo "Usage: $0"
-}
-
-if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
-  usage
-  exit 0
-fi
-
 if [[ "${EUID}" -ne 0 ]]; then
   if command -v sudo >/dev/null 2>&1; then
     SUDO="sudo"
